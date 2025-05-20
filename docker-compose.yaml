@@ -1,0 +1,24 @@
+# version: '3.8'
+
+services:
+  verl:
+    container_name: verl
+    image: hiyouga/verl:ngc-th2.6.0-cu126-vllm0.8.4-flashinfer0.2.2-cxx11abi0
+    volumes:
+      - .:/workspace/verl/  # Mount current directory to /workspace/verl/
+      - ~/.cache/huggingface/:/root/.cache/huggingface/
+    environment:
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - WANDB_API_KEY=${WANDB_API_KEY}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    command: tail -f /dev/null
+    restart: unless-stopped
+    shm_size: '16gb'
+    ulimits:
+      memlock: -1
+      stack: 67108864
