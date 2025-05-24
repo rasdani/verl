@@ -1,12 +1,24 @@
+# Stop any existing Ray instances and start fresh Ray head node with 2 GPUs
+ray stop
+ray start --head --num-gpus=2 --disable-usage-stats
+
 MODEL_PATH=Qwen/Qwen3-0.6B
-EXPERIMENT_NAME=qwen3_0_6b_function_rm
+# EXPERIMENT_NAME=qwen3_0_6b_function_rm
+EXPERIMENT_NAME=qwen3_0_6b_swe_fixer
+# TRAIN_FILE=data/gsm8k/train.parquet
+# TEST_FILE=data/gsm8k/test.parquet
+TRAIN_FILE=data/swe_fixer/train.parquet
+TEST_FILE=data/swe_fixer/test.parquet
+
+# MAX_PROMPT_LENGTH=512
+MAX_PROMPT_LENGTH=4096
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
-    data.train_files=data/gsm8k/train.parquet \
-    data.val_files=data/gsm8k/test.parquet \
+    data.train_files=$TRAIN_FILE \
+    data.val_files=$TEST_FILE \
     data.train_batch_size=1024 \
-    data.max_prompt_length=512 \
+    data.max_prompt_length=$MAX_PROMPT_LENGTH \
     data.max_response_length=1024 \
     data.filter_overlong_prompts=True \
     data.truncation='error' \

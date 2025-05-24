@@ -85,9 +85,10 @@ def convert_swe_fixer_to_verl_format(example, idx, split):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="~/data/swe_fixer")
+    parser.add_argument("--local_dir", default="./data/swe_fixer")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--max_samples", type=int, default=None, help="Limit number of samples for testing")
+    parser.add_argument("--test_size", type=int, default=1024, help="Number of samples for test set (default: 1024 - one typical batch)")
 
     args = parser.parse_args()
 
@@ -96,15 +97,31 @@ if __name__ == "__main__":
     print(f"Loading the {data_source} dataset from huggingface...")
     dataset = datasets.load_dataset(data_source)
 
-    # The dataset should have a train split
-    train_dataset = dataset["train"]
+    # The dataset only has a train split, so we'll create our own train/test split
+    full_dataset = dataset["train"]
+    print(f"Original dataset size: {len(full_dataset)}")
     
     # Limit samples if specified (useful for testing)
     if args.max_samples:
-        train_dataset = train_dataset.select(range(min(args.max_samples, len(train_dataset))))
-        print(f"Limited dataset to {len(train_dataset)} samples for testing")
+        full_dataset = full_dataset.select(range(min(args.max_samples, len(full_dataset))))
+        print(f"Limited dataset to {len(full_dataset)} samples for testing")
 
-    print(f"Processing {len(train_dataset)} samples...")
+    # Shuffle the dataset to avoid repository clustering
+    print("Shuffling dataset to avoid repository clustering...")
+    full_dataset = full_dataset.shuffle(seed=42)
+    
+    # Create train/test split with fixed test size (one batch)
+    dataset_size = len(full_dataset)
+    test_size = min(args.test_size, dataset_size)  # Don't exceed dataset size
+    train_size = dataset_size - test_size
+    
+    print(f"Creating train/test split: {train_size} train, {test_size} test samples")
+    print(f"Test set size matches typical batch size: {test_size}")
+    
+    train_dataset = full_dataset.select(range(train_size))
+    test_dataset = full_dataset.select(range(train_size, dataset_size))
+    
+    print(f"Processing {len(train_dataset)} train samples and {len(test_dataset)} test samples...")
 
     # Process the dataset
     def make_map_fn(split):
@@ -124,7 +141,8 @@ if __name__ == "__main__":
 
         return process_fn
 
-    processed_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
+    processed_train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
+    processed_test_dataset = test_dataset.map(function=make_map_fn("test"), with_indices=True)
 
     local_dir = os.path.expanduser(args.local_dir)
     hdfs_dir = args.hdfs_dir
@@ -132,9 +150,14 @@ if __name__ == "__main__":
     # Create local directory if it doesn't exist
     os.makedirs(local_dir, exist_ok=True)
 
-    output_file = os.path.join(local_dir, "train.parquet")
-    processed_dataset.to_parquet(output_file)
-    print(f"Saved processed dataset to {output_file}")
+    train_output_file = os.path.join(local_dir, "train.parquet")
+    test_output_file = os.path.join(local_dir, "test.parquet")
+    
+    processed_train_dataset.to_parquet(train_output_file)
+    processed_test_dataset.to_parquet(test_output_file)
+    
+    print(f"Saved processed train dataset to {train_output_file}")
+    print(f"Saved processed test dataset to {test_output_file}")
 
     if hdfs_dir is not None:
         raise NotImplementedError("HDFS is not supported for SWE-Fixer")
@@ -143,11 +166,12 @@ if __name__ == "__main__":
         # print(f"Copied to HDFS: {hdfs_dir}")
 
     print("Dataset preprocessing completed!")
-    print(f"Total samples processed: {len(processed_dataset)}")
+    print(f"Total train samples processed: {len(processed_train_dataset)}")
+    print(f"Total test samples processed: {len(processed_test_dataset)}")
     
     # Show a sample of the processed data
-    if len(processed_dataset) > 0:
-        sample = processed_dataset[0]
+    if len(processed_train_dataset) > 0:
+        sample = processed_train_dataset[0]
         print("\nSample processed data:")
         print(f"Data source: {sample['data_source']}")
         print(f"Ability: {sample['ability']}")
