@@ -85,14 +85,14 @@ def convert_swe_fixer_to_verl_format(example, idx, split):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="./data/swe_fixer")
+    parser.add_argument("--local_dir", default="/root/persistent/data/swe_fixer")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--max_samples", type=int, default=None, help="Limit number of samples for testing")
-    parser.add_argument("--test_size", type=int, default=1024, help="Number of samples for test set (default: 1024 - one typical batch)")
+    parser.add_argument("--test_size", type=int, default=32, help="Number of samples for test set (default: 1024 - one typical batch)")
 
     args = parser.parse_args()
 
-    data_source = "rasdani/swe-fixer-70k"
+    data_source = "rasdani/swe-fixer-70k-filtered"
 
     print(f"Loading the {data_source} dataset from huggingface...")
     dataset = datasets.load_dataset(data_source)
