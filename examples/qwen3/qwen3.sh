@@ -67,7 +67,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.n_gpus_per_node=2 \
     trainer.nnodes=1 \
-    trainer.save_freq=1 \
+    trainer.save_freq=5 \
     trainer.default_local_dir="/root/persistent/checkpoints" \
     trainer.test_freq=5 \
     trainer.total_epochs=15 $@
