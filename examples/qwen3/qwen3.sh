@@ -20,15 +20,16 @@ MAX_PROMPT_LENGTH=4096
 MAX_RESPONSE_LENGTH=8192
 
 # TRAIN_BATCH_SIZE=1024
-TRAIN_BATCH_SIZE=128
+# TRAIN_BATCH_SIZE=128
+TRAIN_BATCH_SIZE=64
 # TRAIN_BATCH_SIZE=16
 
 # PPO_MINI_BATCH_SIZE=80
 # PPO_MICRO_BATCH_SIZE_PER_GPU=20
 # PPO_MINI_BATCH_SIZE=16
 # PPO_MICRO_BATCH_SIZE_PER_GPU=4
-PPO_MINI_BATCH_SIZE=16
-PPO_MICRO_BATCH_SIZE_PER_GPU=4
+PPO_MINI_BATCH_SIZE=8
+PPO_MICRO_BATCH_SIZE_PER_GPU=2
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -54,7 +55,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=20 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.8 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
     actor_rollout_ref.rollout.n=8 \
     actor_rollout_ref.rollout.max_num_batched_tokens=32768 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=20 \
