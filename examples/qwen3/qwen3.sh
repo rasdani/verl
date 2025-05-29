@@ -2,8 +2,8 @@
 # ray stop
 # ray start --head --num-gpus=2 --disable-usage-stats
 
-# MODEL_PATH=Qwen/Qwen3-0.6B
-MODEL_PATH=Qwen/Qwen3-1.7B
+MODEL_PATH=Qwen/Qwen3-0.6B
+# MODEL_PATH=Qwen/Qwen3-1.7B
 # EXPERIMENT_NAME=qwen3_0_6b_function_rm
 EXPERIMENT_NAME=qwen3_1_7b_swe_fixer
 # TRAIN_FILE=data/gsm8k/train.parquet
@@ -30,6 +30,8 @@ TRAIN_BATCH_SIZE=64
 # PPO_MICRO_BATCH_SIZE_PER_GPU=4
 PPO_MINI_BATCH_SIZE=8
 PPO_MICRO_BATCH_SIZE_PER_GPU=2
+# LOG_PROB_MICRO_BATCH_SIZE_PER_GPU=20
+LOG_PROB_MICRO_BATCH_SIZE_PER_GPU=8
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -55,10 +57,10 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=20 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.8 \
     actor_rollout_ref.rollout.n=8 \
     actor_rollout_ref.rollout.max_num_batched_tokens=32768 \
-    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=20 \
+    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$LOG_PROB_MICRO_BATCH_SIZE_PER_GPU \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
