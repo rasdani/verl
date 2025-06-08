@@ -16,6 +16,7 @@ Utilities to create common models from huggingface
 """
 
 import os
+import re
 import warnings
 from typing import Dict, Optional, Type
 
@@ -28,6 +29,7 @@ from transformers import (
     GenerationConfig,
     MistralForSequenceClassification,
     PretrainedConfig,
+    PreTrainedModel,
 )
 
 from verl.models.registry import ModelRegistry
@@ -205,20 +207,34 @@ def compute_position_id_with_mask(mask):
     return torch.clip(torch.cumsum(mask, dim=-1) - 1, min=0, max=None)
 
 
-def normalize_model_name(name, pp_rank, vpp_rank, pp_size, vpp_size, num_layers, layer_name="layers"):
+def convert_weight_keys(state_dict: Dict[str, torch.Tensor], model: PreTrainedModel):
+    # convert state dict keys: https://github.com/huggingface/transformers/pull/38385
+    if not hasattr(model, "_checkpoint_conversion_mapping"):
+        return state_dict
+
+    reverse_key_mapping = {v: k for k, v in model._checkpoint_conversion_mapping.items()}
+    original_weights = {}
+    for key, value in state_dict.items():
+        for pattern, replacement in reverse_key_mapping.items():
+            replacement = replacement.lstrip("^")  # strip off un-needed chars and patterns
+            replacement = re.sub(r"\(.*\)", "", replacement)
+            key, n_replace = re.subn(pattern, replacement, key)
+            # Early exit of the loop
+            if n_replace > 0:
+                break
+
+        original_weights[key] = value
+
+    return original_weights
+
+
+def normalize_model_name(name, pp_rank, vpp_rank, transformer_config, layer_name="layers"):
     """
     Transform the model name in each model_chunk in each pp stage into the name in inference engine
     """
-    if vpp_size > 1:
-        # print(f'try to bind vpp params to inference engine...')
-        layers_per_pp = num_layers // pp_size
-        layers_per_vpp = layers_per_pp // vpp_size
-        pp_offset = layers_per_vpp * pp_rank
-        vpp_offset = (layers_per_vpp * pp_size) * vpp_rank
-        layer_offset = pp_offset + vpp_offset
-    else:
-        layers_per_pp = num_layers // pp_size
-        layer_offset = layers_per_pp * pp_rank
+    from verl.utils.megatron_utils import get_transformer_layer_offset
+
+    layer_offset = get_transformer_layer_offset(pp_rank, vpp_rank, transformer_config)
 
     if layer_name in name:  # belong to an intermediate layer
         split_name = name.split(".")
@@ -296,7 +312,7 @@ def _load_hf_model(config, model_config, is_value_model, local_cache_path):
         from verl.utils.fs import copy_to_local
 
         print(f"start download from {config.model.path}")
-        local_model_path = copy_to_local(src=config.model.path, cache_dir=local_cache_path)
+        local_model_path = copy_to_local(src=config.model.path, cache_dir=local_cache_path, use_shm=config.model.get("use_shm", False))
         print("finish download")
     else:
         local_model_path = config.model.path
