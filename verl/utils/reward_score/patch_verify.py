@@ -24,6 +24,12 @@ def parse_last_diff_codeblock(markdown_str):
     else:
         return None
 
+def normalize_diff(diff_text: str) -> str:
+    diff_text = re.sub(r'(?m)^index [^\n]*\n', '', diff_text)
+    diff_text = re.sub(r'(?m)^(@@[^@]*@@).*', r'\1', diff_text)
+    diff_text = diff_text.strip() + "\n"
+    return diff_text
+
 def score_patching(model_diff, ground_truth, debug=False):
     """
     Score how well the model's patches match the expected patches.
@@ -70,6 +76,9 @@ def compute_score(solution_str, ground_truth, extra_info=None):
     """
     
     try:
+        after_thinking = solution_str.split("</think>")[-1].strip()
+        if "```diff" in after_thinking:
+            breakpoint()
         model_diff = parse_last_diff_codeblock(solution_str)
         if not model_diff:
             return 0.0
