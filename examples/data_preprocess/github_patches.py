@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data_source = "rasdani/github-patches-debug"
+    data_source = "rasdani/github-patches-genesys-2k-context-1k-diff"
 
     print(f"Loading the {data_source} dataset from huggingface...")
     dataset = datasets.load_dataset(data_source)

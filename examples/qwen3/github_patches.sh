@@ -3,40 +3,49 @@
 # ray start --head --num-gpus=2 --disable-usage-stats
 
 # MODEL_PATH=Qwen/Qwen3-0.6B
-MODEL_PATH=Qwen/Qwen3-1.7B
+# MODEL_PATH=Qwen/Qwen3-1.7B
+MODEL_PATH=Qwen/Qwen3-4B
 # EXPERIMENT_NAME=qwen3_0_6b_gh_patches
-EXPERIMENT_NAME=qwen3_1_7b_gh_patches
-TRAIN_FILE=/root/persistent/data/github_patches/train.parquet
-TEST_FILE=/root/persistent/data/github_patches/test.parquet
+# EXPERIMENT_NAME=qwen3_1_7b_gh_patches
+EXPERIMENT_NAME=qwen3_4b_gh_patches
+TRAIN_FILE=data/github_patches/train.parquet
+TEST_FILE=data/github_patches/test.parquet
 
 # MAX_PROMPT_LENGTH=512
-MAX_PROMPT_LENGTH=4096
+# MAX_PROMPT_LENGTH=4096
+MAX_PROMPT_LENGTH=2048
 # MAX_PROMPT_LENGTH=-1
 # MAX_RESPONSE_LENGTH=1024
 # MAX_RESPONSE_LENGTH=16384
-MAX_RESPONSE_LENGTH=4096
+# MAX_RESPONSE_LENGTH=4096
 # MAX_RESPONSE_LENGTH=8192
+MAX_RESPONSE_LENGTH=30720
 
 # TRAIN_BATCH_SIZE=1024
-# TRAIN_BATCH_SIZE=128
+TRAIN_BATCH_SIZE=128
+# TRAIN_BATCH_SIZE=256
 # TRAIN_BATCH_SIZE=64
 # TRAIN_BATCH_SIZE=16
 # TRAIN_BATCH_SIZE=4
-TRAIN_BATCH_SIZE=2
+# TRAIN_BATCH_SIZE=2
+# TRAIN_BATCH_SIZE=8
 
 # PPO_MINI_BATCH_SIZE=80
 # PPO_MICRO_BATCH_SIZE_PER_GPU=20
 # PPO_MINI_BATCH_SIZE=16
 # PPO_MICRO_BATCH_SIZE_PER_GPU=4
 # PPO_MINI_BATCH_SIZE=8
-# PPO_MICRO_BATCH_SIZE_PER_GPU=2
-# PPO_MINI_BATCH_SIZE=4
-PPO_MINI_BATCH_SIZE=2
-# PPO_MICRO_BATCH_SIZE_PER_GPU=2
 PPO_MICRO_BATCH_SIZE_PER_GPU=1
+# PPO_MINI_BATCH_SIZE=4
+PPO_MINI_BATCH_SIZE=8
+# PPO_MINI_BATCH_SIZE=16
+# PPO_MICRO_BATCH_SIZE_PER_GPU=2
+# PPO_MICRO_BATCH_SIZE_PER_GPU=1
+# PPO_MICRO_BATCH_SIZE_PER_GPU=4
 # LOG_PROB_MICRO_BATCH_SIZE_PER_GPU=20
 # LOG_PROB_MICRO_BATCH_SIZE_PER_GPU=8
-LOG_PROB_MICRO_BATCH_SIZE_PER_GPU=1
+# LOG_PROB_MICRO_BATCH_SIZE_PER_GPU=1
+# LOG_PROB_MICRO_BATCH_SIZE_PER_GPU=4
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -56,13 +65,14 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
     actor_rollout_ref.actor.entropy_coeff=0 \
+    actor_rollout_ref.actor.checkpoint.save_contents=['model','optimizer','extra','hf_model'] \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
-    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=20 \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$PPO_MICRO_BATCH_SIZE_PER_GPU \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.8 \
     actor_rollout_ref.rollout.n=8 \
     actor_rollout_ref.rollout.max_num_batched_tokens=32768 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$PPO_MICRO_BATCH_SIZE_PER_GPU \
@@ -73,9 +83,9 @@ python3 -m verl.trainer.main_ppo \
     trainer.log_val_generations=4 \
     trainer.project_name='verl_gh_patches' \
     trainer.experiment_name=$EXPERIMENT_NAME \
-    trainer.n_gpus_per_node=2 \
+    trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=5 \
-    trainer.default_local_dir="/root/persistent/checkpoints/$EXPERIMENT_NAME" \
-    trainer.test_freq=1 \
+    trainer.save_freq=3 \
+    trainer.default_local_dir="checkpoints/$EXPERIMENT_NAME" \
+    trainer.test_freq=3 \
     trainer.total_epochs=1 $@
