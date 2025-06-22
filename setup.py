@@ -46,7 +46,7 @@ install_requires = [
 
 TEST_REQUIRES = ["pytest", "pre-commit", "py-spy"]
 PRIME_REQUIRES = ["pyext"]
-GEO_REQUIRES = ["mathruler"]
+GEO_REQUIRES = ["mathruler", "torchvision", "qwen_vl_utils"]
 GPU_REQUIRES = ["liger-kernel", "flash-attn"]
 MATH_REQUIRES = ["math-verify"]  # Add math-verify as an optional dependency
 VLLM_REQUIRES = ["tensordict<=0.6.2", "vllm<=0.8.5"]
@@ -56,6 +56,7 @@ SGLANG_REQUIRES = [
     "torch-memory-saver>=0.0.5",
     "torch==2.6.0",
 ]
+TRL_REQUIRES = ["trl<=0.9.6"]
 
 extras_require = {
     "test": TEST_REQUIRES,
@@ -65,6 +66,7 @@ extras_require = {
     "math": MATH_REQUIRES,
     "vllm": VLLM_REQUIRES,
     "sglang": SGLANG_REQUIRES,
+    "trl": TRL_REQUIRES,
 }
 
 
