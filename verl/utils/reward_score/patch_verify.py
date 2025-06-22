@@ -15,18 +15,21 @@
 import re
 import cydifflib
 
+DIFF_BLOCK_REGEX = re.compile(r"```diff\s*(.*?)\s*```", re.DOTALL)
+INDEX_LINE_REGEX = re.compile(r"^index [^\n]*\n")
+FUNC_CONTEXT_REGEX = re.compile(r"(?m)^(@@[^@]*@@).*")
 
-def parse_last_diff_codeblock(markdown_str):
-    matches = re.finditer(r"```diff\s*(.*?)\s*```", markdown_str, re.DOTALL)
+def parse_last_diff_codeblock(markdown_str: str) -> str:
+    """Extract the last ```diff``` code block from markdown text."""
+    matches = DIFF_BLOCK_REGEX.findall(markdown_str)
     if matches:
-        last_match = matches[-1]
-        return last_match.group(1).strip()
+        return matches[-1].strip() + "\n"
     else:
         return None
 
 def normalize_diff(diff_text: str) -> str:
-    diff_text = re.sub(r'(?m)^index [^\n]*\n', '', diff_text)
-    diff_text = re.sub(r'(?m)^(@@[^@]*@@).*', r'\1', diff_text)
+    diff_text = INDEX_LINE_REGEX.sub('', diff_text)
+    diff_text = FUNC_CONTEXT_REGEX.sub(r'\1', diff_text)
     diff_text = diff_text.strip() + "\n"
     return diff_text
 
@@ -77,9 +80,7 @@ def compute_score(solution_str, ground_truth, extra_info=None):
     
     try:
         after_thinking = solution_str.split("</think>")[-1].strip()
-        if "```diff" in after_thinking:
-            breakpoint()
-        model_diff = parse_last_diff_codeblock(solution_str)
+        model_diff = parse_last_diff_codeblock(after_thinking)
         if not model_diff:
             return 0.0
         
