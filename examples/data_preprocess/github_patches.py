@@ -60,14 +60,15 @@ def convert_github_patches_to_verl_format(example, idx, split):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="/root/persistent/data/github_patches_2k")
+    parser.add_argument("--local_dir", default="/root/persistent/data/github_patches_4k")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--max_samples", type=int, default=None, help="Limit number of samples for testing")
     parser.add_argument("--test_size", type=int, default=32, help="Number of samples for test set (default: 1024 - one typical batch)")
 
     args = parser.parse_args()
 
-    data_source = "rasdani/github-patches-genesys-2k-context-1k-diff"
+    # data_source = "rasdani/github-patches-genesys-2k-context-1k-diff"
+    data_source = "rasdani/github-patches-genesys-swe-prompt-4k-context-1k-diff"
 
     print(f"Loading the {data_source} dataset from huggingface...")
     dataset = datasets.load_dataset(data_source)
@@ -82,7 +83,7 @@ if __name__ == "__main__":
         print(f"Limited dataset to {len(full_dataset)} samples for testing")
 
     # Shuffle the dataset to avoid repository clustering
-    print("Shuffling dataset to avoid repository clustering...")
+    # print("Shuffling dataset to avoid repository clustering...")
     # full_dataset = full_dataset.shuffle(seed=42)
     
     # Create train/test split with fixed test size (one batch)
