@@ -63,7 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--local_dir", default="/root/persistent/data/github_patches_4k")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--max_samples", type=int, default=None, help="Limit number of samples for testing")
-    parser.add_argument("--test_size", type=int, default=32, help="Number of samples for test set (default: 1024 - one typical batch)")
+    parser.add_argument("--test_size", type=int, default=512, help="Number of samples for test set (default: 1024 - one typical batch)")
 
     args = parser.parse_args()
 
