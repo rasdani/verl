@@ -31,12 +31,10 @@ EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k
 TRAIN_BATCH_SIZE=32
 PPO_MINI_BATCH_SIZE=16
 PPO_MICRO_BATCH_SIZE=16
-# PPO_MAX_TOKEN_LEN_PER_GPU=20000
+PPO_MAX_TOKEN_LEN_PER_GPU=20000
 # PPO_MAX_TOKEN_LEN_PER_GPU=40000
-PPO_MAX_TOKEN_LEN_PER_GPU=80000
-# MAX_NUM_BATCHED_TOKENS=20000
+MAX_NUM_BATCHED_TOKENS=20000
 # MAX_NUM_BATCHED_TOKENS=40000
-MAX_NUM_BATCHED_TOKENS=80000
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -81,9 +79,9 @@ python3 -m verl.trainer.main_ppo \
     algorithm.kl_ctrl.kl_coef=0.001 \
     trainer.critic_warmup=0 \
     trainer.logger=['console','wandb'] \
+    trainer.log_val_generations=16 \
     trainer.project_name='swe-rl' \
     trainer.experiment_name=$EXPERIMENT_NAME \
-    trainer.val_before_train=False \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
     trainer.save_freq=25 \

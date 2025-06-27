@@ -44,7 +44,7 @@ def score_patching(model_diff, ground_truth, debug=False):
         debug (bool): Whether to print debug information
 
     Returns:
-        float: Score between 0.0 and 1.0
+        float: Score between -1.0 and 1.0
     """
     try:
         score = cydifflib.SequenceMatcher(
@@ -62,7 +62,7 @@ def score_patching(model_diff, ground_truth, debug=False):
     except Exception as e:
         if debug:
             print(f"DEBUG: Exception in score_patching: {repr(e)}")
-        return 0.0
+        return -1.0
 
 
 def compute_score(solution_str, ground_truth, extra_info=None):
@@ -77,14 +77,14 @@ def compute_score(solution_str, ground_truth, extra_info=None):
             - expected_patches: Expected code patches
             
     Returns:
-        float: Score between 0.0 and 1.0
+        float: Score between -1.0 and 1.0
     """
     
     try:
         after_thinking = solution_str.split("</think>")[-1].strip()
         model_diff = parse_last_diff_codeblock(after_thinking)
         if not model_diff:
-            return 0.0
+            return -1.0
         
         verification_info = {
             "golden_diff": ground_truth,
@@ -94,7 +94,7 @@ def compute_score(solution_str, ground_truth, extra_info=None):
         return score_patching(model_diff, ground_truth=verification_info["golden_diff"], debug=False)
         
     except Exception:
-        return 0.0
+        return -1.0
 
 
 if __name__ == "__main__":
