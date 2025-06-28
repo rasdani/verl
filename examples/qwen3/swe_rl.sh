@@ -89,4 +89,4 @@ python3 -m verl.trainer.main_ppo \
     trainer.test_freq=10 \
     trainer.default_local_dir="/root/persistent/checkpoints/$EXPERIMENT_NAME" \
     trainer.default_hdfs_dir=null \
-    trainer.total_epochs=1 $@
+    trainer.total_epochs=2 $@

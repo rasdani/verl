@@ -24,8 +24,8 @@ def parse_last_diff_codeblock(markdown_str: str) -> str:
     """Extract the last ```diff``` code block from markdown text."""
     matches = DIFF_BLOCK_REGEX.findall(markdown_str)
     # matches = PATCH_TAG_REGEX.findall(markdown_str)
-    if matches:
-        return matches[-1].strip() + "\n"
+    if len(matches) == 1:
+        return matches[0].strip() + "\n"
     else:
         return ""
 
