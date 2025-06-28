@@ -26,7 +26,7 @@ fi
 
 TRAIN_FILE=~/persistent/data/github_patches_2k/train.parquet
 TEST_FILE=~/persistent/data/github_patches_2k/test.parquet
-EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k
+EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k_fixed_reward
 
 # TRAIN_BATCH_SIZE=32
 TRAIN_BATCH_SIZE=64
@@ -85,8 +85,10 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=10 \
+    trainer.save_freq=25 \
     trainer.test_freq=10 \
     trainer.default_local_dir="/root/persistent/checkpoints/$EXPERIMENT_NAME" \
+    trainer.validation_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/validation" \
+    trainer.rollout_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/train" \
     trainer.default_hdfs_dir=null \
     trainer.total_epochs=2 $@
