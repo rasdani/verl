@@ -28,13 +28,14 @@ TRAIN_FILE=~/persistent/data/github_patches_2k/train.parquet
 TEST_FILE=~/persistent/data/github_patches_2k/test.parquet
 EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k
 
-TRAIN_BATCH_SIZE=32
+# TRAIN_BATCH_SIZE=32
+TRAIN_BATCH_SIZE=64
 PPO_MINI_BATCH_SIZE=16
 PPO_MICRO_BATCH_SIZE=16
-PPO_MAX_TOKEN_LEN_PER_GPU=20000
-# PPO_MAX_TOKEN_LEN_PER_GPU=40000
-MAX_NUM_BATCHED_TOKENS=20000
-# MAX_NUM_BATCHED_TOKENS=40000
+# PPO_MAX_TOKEN_LEN_PER_GPU=20000
+PPO_MAX_TOKEN_LEN_PER_GPU=40000
+# MAX_NUM_BATCHED_TOKENS=20000
+MAX_NUM_BATCHED_TOKENS=40000
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -58,7 +59,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.use_kl_loss=False \
     actor_rollout_ref.actor.kl_loss_coef=0 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
-    actor_rollout_ref.actor.ulysses_sequence_parallel_size=2 \
+    actor_rollout_ref.actor.ulysses_sequence_parallel_size=1 \
     actor_rollout_ref.actor.entropy_coeff=0 \
     actor_rollout_ref.actor.grad_clip=1.0 \
     actor_rollout_ref.actor.clip_ratio_low=0.2 \
@@ -84,7 +85,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=25 \
+    trainer.save_freq=10 \
     trainer.test_freq=10 \
     trainer.default_local_dir="/root/persistent/checkpoints/$EXPERIMENT_NAME" \
     trainer.default_hdfs_dir=null \

@@ -81,8 +81,9 @@ def compute_score(solution_str, ground_truth, extra_info=None):
     """
     
     try:
-        after_thinking = solution_str.split("</think>")[-1].strip()
-        model_diff = parse_last_diff_codeblock(after_thinking)
+        think_splits = solution_str.split("</think>")
+        after_think = think_splits[1].strip() if len(think_splits) == 2 else ""
+        model_diff = parse_last_diff_codeblock(after_think)
         if not model_diff:
             return -1.0
         
