@@ -15,19 +15,19 @@
 import re
 import cydifflib
 
-# DIFF_BLOCK_REGEX = re.compile(r"```diff\s*(.*?)\s*```", re.DOTALL)
-PATCH_TAG_REGEX = re.compile(r"<patch>\s*(.*?)\s*</patch>", re.DOTALL)
+DIFF_BLOCK_REGEX = re.compile(r"```diff\s*(.*?)\s*```", re.DOTALL)
+# PATCH_TAG_REGEX = re.compile(r"<patch>\s*(.*?)\s*</patch>", re.DOTALL)
 INDEX_LINE_REGEX = re.compile(r"^index [^\n]*\n")
 FUNC_CONTEXT_REGEX = re.compile(r"(?m)^(@@[^@]*@@).*")
 
 def parse_last_diff_codeblock(markdown_str: str) -> str:
     """Extract the last ```diff``` code block from markdown text."""
-    # matches = DIFF_BLOCK_REGEX.findall(markdown_str)
-    matches = PATCH_TAG_REGEX.findall(markdown_str)
+    matches = DIFF_BLOCK_REGEX.findall(markdown_str)
+    # matches = PATCH_TAG_REGEX.findall(markdown_str)
     if matches:
         return matches[-1].strip() + "\n"
     else:
-        return None
+        return ""
 
 def normalize_diff(diff_text: str) -> str:
     diff_text = INDEX_LINE_REGEX.sub('', diff_text)
