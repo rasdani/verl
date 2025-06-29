@@ -7,7 +7,7 @@ export HYDRA_FULL_ERROR=1
 ulimit -n 65536
 export VLLM_ATTENTION_BACKEND=XFORMERS
 export VLLM_ENGINE_ITERATION_TIMEOUT_S=1000000000
-export VLLM_LOG_LEVEL=INFO
+export VLLM_LOG_LEVEL=DEBUG
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -22,23 +22,30 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Set default model path if not provided
-if [ -z "$MODEL_PATH" ]; then
-    MODEL_PATH="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
-fi
+# MODEL_PATH="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+MODEL_PATH="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
 
-TRAIN_FILE=~/persistent/data/github_patches_2k/train.parquet
-TEST_FILE=~/persistent/data/github_patches_2k/test.parquet
-EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k_fixed_reward
+
+# TRAIN_FILE=~/persistent/data/github_patches_2k/train.parquet
+# TEST_FILE=~/persistent/data/github_patches_2k/test.parquet
+TRAIN_FILE=~/persistent/data/swe_smith_oracle_4k/train.parquet
+TEST_FILE=~/persistent/data/swe_smith_oracle_4k/test.parquet
+# EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k_fixed_reward
+EXPERIMENT_NAME=deepseek_r1_qwen3_8b_swe_smith_oracle_4k
 
 # TRAIN_BATCH_SIZE=32
 TRAIN_BATCH_SIZE=64
 PPO_MINI_BATCH_SIZE=16
 PPO_MICRO_BATCH_SIZE=16
-# PPO_MAX_TOKEN_LEN_PER_GPU=20000
-PPO_MAX_TOKEN_LEN_PER_GPU=40000
-# MAX_NUM_BATCHED_TOKENS=20000
-MAX_NUM_BATCHED_TOKENS=40000
+PPO_MAX_TOKEN_LEN_PER_GPU=20000
+# PPO_MAX_TOKEN_LEN_PER_GPU=40000
+MAX_NUM_BATCHED_TOKENS=20000
+# MAX_NUM_BATCHED_TOKENS=40000
+
+# MAX_PROMPT_LENGTH=2048
+MAX_PROMPT_LENGTH=4096
+# MAX_RESPONSE_LENGTH=16384
+MAX_RESPONSE_LENGTH=32768
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -46,8 +53,8 @@ python3 -m verl.trainer.main_ppo \
     data.val_files=$TEST_FILE \
     data.train_batch_size=$TRAIN_BATCH_SIZE \
     data.val_batch_size=512 \
-    data.max_prompt_length=2048 \
-    data.max_response_length=16384 \
+    data.max_prompt_length=$MAX_PROMPT_LENGTH \
+    data.max_response_length=$MAX_RESPONSE_LENGTH \
     data.filter_overlong_prompts=True \
     data.filter_overlong_prompts_workers=4 \
     actor_rollout_ref.model.path=$MODEL_PATH \
@@ -88,10 +95,10 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=25 \
+    trainer.save_freq=20 \
     trainer.test_freq=10 \
     trainer.default_local_dir="/root/persistent/checkpoints/$EXPERIMENT_NAME" \
     trainer.validation_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/validation" \
     trainer.rollout_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/train" \
     trainer.default_hdfs_dir=null \
-    trainer.total_epochs=2 $@
+    trainer.total_epochs=5 $@

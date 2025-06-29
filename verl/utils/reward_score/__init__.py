@@ -88,9 +88,11 @@ def default_compute_score(data_source, solution_str, ground_truth, extra_info=No
 
         res = swe_fixer.compute_score(solution_str, ground_truth, extra_info)
     elif data_source == "github_patches":
-        from . import patch_verify
+        # from . import patch_verify
+        from . import swe_smith_oracle
 
-        res = patch_verify.compute_score(solution_str, ground_truth, extra_info)
+        # res = patch_verify.compute_score(solution_str, ground_truth, extra_info)
+        res = swe_smith_oracle.compute_score(solution_str, ground_truth, extra_info)
 
     else:
         raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
