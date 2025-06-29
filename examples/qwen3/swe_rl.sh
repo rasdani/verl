@@ -1,6 +1,9 @@
 #!/bin/bash
 set -x
 
+# Set environment variable to get full error details
+export HYDRA_FULL_ERROR=1
+
 ulimit -n 65536
 export VLLM_ATTENTION_BACKEND=XFORMERS
 export VLLM_ENGINE_ITERATION_TIMEOUT_S=1000000000
