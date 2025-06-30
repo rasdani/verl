@@ -85,7 +85,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=8 \
     actor_rollout_ref.rollout.val_kwargs.n=2 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
-    actor_rollout_ref.actor.checkpoint.save_contents=['model','optimizer','extra','hf_model'] \
+    actor_rollout_ref.actor.checkpoint.save_contents=['model','optimizer','extra'] \
     actor_rollout_ref.rollout.disable_log_stats=False \
     algorithm.kl_ctrl.kl_coef=0.001 \
     trainer.critic_warmup=0 \
