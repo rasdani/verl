@@ -88,11 +88,17 @@ def default_compute_score(data_source, solution_str, ground_truth, extra_info=No
 
         res = swe_fixer.compute_score(solution_str, ground_truth, extra_info)
     elif data_source == "github_patches":
-        # from . import patch_verify
-        from . import swe_smith_oracle
+        # Prefer the more robust SWE-RL reward.  Fallback to swe_smith_oracle if
+        # the new implementation hits an unexpected error (for compatibility
+        # with any legacy callers).
+        from . import swe_rl as _swe_rl
 
-        # res = patch_verify.compute_score(solution_str, ground_truth, extra_info)
-        res = swe_smith_oracle.compute_score(solution_str, ground_truth, extra_info)
+        try:
+            res = _swe_rl.compute_score(solution_str, ground_truth, extra_info)
+        except Exception:
+            from . import swe_smith_oracle as _swe_smith_oracle
+
+            res = _swe_smith_oracle.compute_score(solution_str, ground_truth, extra_info)
 
     else:
         raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
