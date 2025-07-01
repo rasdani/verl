@@ -93,6 +93,10 @@ def default_compute_score(data_source, solution_str, ground_truth, extra_info=No
 
         # res = patch_verify.compute_score(solution_str, ground_truth, extra_info)
         res = swe_smith_oracle.compute_score(solution_str, ground_truth, extra_info)
+    elif data_source == "swe_search_replace":
+        from . import swe_search_replace
+
+        res = swe_search_replace.compute_score(solution_str, ground_truth, extra_info)
 
     else:
         raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
