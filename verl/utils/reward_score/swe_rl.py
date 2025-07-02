@@ -502,6 +502,80 @@ def calculate_search_replace_reward(
     except FormatError as e:
         return -1.0, dict(error=str(e))
 
+def calculate_reward_against_oracle_patch(
+    code_context: dict[str, str],
+    oracle_patch: dict[str, str],
+    pred_new_content: dict[str, str],
+) -> tuple[float, dict]:
+    """
+    Compute the SWE-RL reward given the code context, oracle patch, and the model output.
+    Note that this function is a general version of the reward calculation, which can be used
+    for code changes in any form, not just search/replace edits. For search/replace edits, use
+    `calculate_search_replace_reward`.
+
+    The return value is always within the range of [0, 1].
+
+    Args:
+        code_context: path -> original content of the file. It doesn't need to
+            contain the entire codebase, only the files that are affected by the oracle patch.
+        oracle_patch: path -> oracle patch.
+        pred_new_content: path -> predicted new content of the file after change.
+
+    Returns:
+        A float value representing the reward, and a dictionary containing some metadata.
+    """
+    # Obtain a unified diff for each file, for both the predicted and the oracle patch
+    pred_patch = get_normalized_patch(code_context, pred_new_content)
+    # Calculate the reward based on the similarity between the predicted and the oracle patch
+    similarities = compute_change_similarities(pred_patch, oracle_patch)
+    # assert len(similarities) > 0
+    # This means oracle_patch and pred_patch are both empty, then they are identical and we reward 1.0
+    if len(similarities) == 0:
+        assert len(oracle_patch) == 0 and len(pred_patch) == 0
+        return 1.0, dict(similarities=[])
+    reward = sum(map(lambda x: x["similarity"], similarities)) / len(similarities)
+    return reward, dict(similarities=similarities)
+
+def calculate_search_replace_reward_against_oracle_patch(
+    code_context: dict[str, str],
+    oracle_patch: dict[str, str],
+    output: str,
+) -> tuple[float, dict]:
+    """
+    The search/replace version of the reward calculation. It expects the output to contain
+    the thought and solution in the following format:
+    <think>
+    ...
+    </think>
+    <solution>
+    ...
+    </solution>
+
+    Args:
+        code_context: path -> original content of the file.
+        oracle_patch: path -> oracle patch.
+        output: The output from the model containing the thought and solution.
+
+    Returns:
+        A float value representing the reward, and a dictionary containing some metadata.
+    """
+    try:
+        # Extract the thought and solution from the output
+        thought, answer = extract_thought_solution(output)
+        # Parse the search/replace edits from the solution
+        pred_search_replaces = parse_search_replace(answer)
+        if len(pred_search_replaces) == 0:
+            raise FormatError("No valid search blocks found")
+        # Get the new content of each file after applying the search/replace edits
+        pred_new_content = apply_code_change(code_context, pred_search_replaces)
+        reward, metadata = calculate_reward_against_oracle_patch(
+            code_context, oracle_patch, pred_new_content
+        )
+        metadata["thought"] = thought
+        metadata["answer"] = answer
+        return reward, metadata
+    except FormatError as e:
+        return -1.0, dict(error=str(e))
 
 def get_filelevel_diff(patch_text: str) -> dict[str, str]:
     """
@@ -589,24 +663,16 @@ def compute_score(solution_str, ground_truth, extra_info=None):
     Returns:
         float: Score between -1.0 and 1.0
     """
-    ground_truth = extract_minimal_patch(ground_truth)
+    oracle_patch = get_filelevel_diff(ground_truth)
+    verification_info = extra_info["verification_info"]
     
     try:
-        think_splits = solution_str.split("</think>")
-        after_think = think_splits[1].strip() if len(think_splits) == 2 else ""
-        if not after_think:
-            return -1.0
-        model_diff = extract_diff(after_think)
-        model_diff = extract_minimal_patch(model_diff)
-        if not model_diff:
-            return -1.0
-        
-        verification_info = {
-            "golden_diff": ground_truth,
-        }
-        # verification_info = json.loads(extra_info)
-
-        return score_patching(model_diff, ground_truth=verification_info["golden_diff"], debug=False)
+        reward, metadata = calculate_search_replace_reward_against_oracle_patch(
+            code_context=verification_info["code_context"],
+            oracle_patch=oracle_patch,
+            output=solution_str
+        )
+        return reward
         
     except Exception:
         return -1.0

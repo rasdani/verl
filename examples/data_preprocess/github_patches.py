@@ -29,7 +29,7 @@ import datasets
 
 def convert_github_patches_to_verl_format(example, idx, split):
     """Convert a single SWE-Fixer example to VERL format."""
-    # verification_info = json.loads(example["verification_info"])
+    verification_info = json.loads(example["verification_info"])
         
     # Create VERL format
     data = {
@@ -49,9 +49,9 @@ def convert_github_patches_to_verl_format(example, idx, split):
             "split": split,
             "index": idx,
             # "problem_id": example["problem_id"],
-            # "in_source_id": example["in_source_id"],
+            "in_source_id": example["in_source_id"],
             # "task_type": example["task_type"],
-            # "verification_info": verification_info
+            "verification_info": verification_info
         }
     }
     
