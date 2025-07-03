@@ -60,7 +60,7 @@ def convert_github_patches_to_verl_format(example, idx, split):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="/root/persistent/data/swe_smith_oracle_4k")
+    parser.add_argument("--local_dir", default="/root/persistent/data/swe-rl-2k-context-1k-diff-2k-examples")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--max_samples", type=int, default=None, help="Limit number of samples for testing")
     parser.add_argument("--test_size", type=int, default=64, help="Number of samples for test set (default: 1024 - one typical batch)")
@@ -70,7 +70,8 @@ if __name__ == "__main__":
     # data_source = "rasdani/github-patches-genesys-2k-context-1k-diff"
     # data_source = "rasdani/github-patches-genesys-swe-prompt-4k-context-1k-diff"
     # data_source = "rasdani/github-patches-genesys-swe-prompt-2k-context-1k-diff"
-    data_source = "rasdani/SWE-smith-oracle-4k-context-1k-diff"
+    # data_source = "rasdani/SWE-smith-oracle-4k-context-1k-diff"
+    data_source = "rasdani/github-patches-genesys-agentless-prompt-2k-context-1k-diff-2k-examples"
 
     print(f"Loading the {data_source} dataset from huggingface...")
     dataset = datasets.load_dataset(data_source)
