@@ -30,29 +30,31 @@ import datasets
 def convert_github_patches_to_verl_format(example, idx, split):
     """Convert a single SWE-Fixer example to VERL format."""
     # verification_info = json.loads(example["verification_info"])
-    verification_info = example["verification_info"]
+    # verification_info = example["verification_info"]
         
     # Create VERL format
     data = {
         "data_source": "github_patches",
-        "prompt": [
-            {
-                "role": "user",
-                "content": example["prompt"]
-            }
-        ],
+        "prompt": example["messages"],
+        # "prompt": [
+        #     {
+        #         "role": "user",
+        #         "content": example["prompt"]
+        #     }
+        # ],
         "ability": "github_patches",
         "reward_model": {
             "style": "rule",
-            "ground_truth": example["golden_diff"]
+            # "ground_truth": example["golden_diff"]
+            "ground_truth": example["patch"]
         },
         "extra_info": {
             "split": split,
             "index": idx,
             # "problem_id": example["problem_id"],
-            "in_source_id": example["in_source_id"],
+            # "in_source_id": example["in_source_id"],
             # "task_type": example["task_type"],
-            "verification_info": verification_info
+            # "verification_info": verification_info
         }
     }
     
@@ -61,7 +63,7 @@ def convert_github_patches_to_verl_format(example, idx, split):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="/root/persistent/data/swe-rl-2k-context-1k-diff-2k-examples")
+    parser.add_argument("--local_dir", default="/root/persistent/data/r2e-gym-subset-oracle-4k")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--max_samples", type=int, default=None, help="Limit number of samples for testing")
     parser.add_argument("--test_size", type=int, default=64, help="Number of samples for test set (default: 1024 - one typical batch)")
@@ -72,7 +74,8 @@ if __name__ == "__main__":
     # data_source = "rasdani/github-patches-genesys-swe-prompt-4k-context-1k-diff"
     # data_source = "rasdani/github-patches-genesys-swe-prompt-2k-context-1k-diff"
     # data_source = "rasdani/SWE-smith-oracle-4k-context-1k-diff"
-    data_source = "rasdani/github-patches-genesys-agentless-prompt-2k-context-1k-diff-2k-examples"
+    # data_source = "rasdani/github-patches-genesys-agentless-prompt-2k-context-1k-diff-2k-examples"
+    data_source = "rasdani/R2E-Gym-Subset-Oracle-4k-context-1k-patch"
 
     print(f"Loading the {data_source} dataset from huggingface...")
     dataset = datasets.load_dataset(data_source)

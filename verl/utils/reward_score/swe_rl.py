@@ -7,7 +7,6 @@ from typing import TypedDict
 import os
 import subprocess
 import uuid
-import utils
 import difflib
 import re
 import warnings
@@ -676,3 +675,77 @@ def compute_score(solution_str, ground_truth, extra_info=None):
         
     except Exception:
         return -1.0
+
+if __name__ == "__main__":
+    import datasets
+    import json
+    from collections import OrderedDict
+    
+    # Read data from parquet file
+    parquet_file = "data/train.parquet"
+    if not os.path.exists(parquet_file):
+        print(f"Error: {parquet_file} does not exist")
+        exit(1)
+    
+    print(f"Loading dataset from {parquet_file}...")
+    dataset = datasets.load_dataset("parquet", data_files=parquet_file)["train"]
+    
+    if len(dataset) == 0:
+        print("Error: No examples found in the dataset")
+        exit(1)
+    
+    # Get the first example
+    example = dataset[0]
+    
+    print("=== Example Data ===")
+    print(f"Data source: {example['data_source']}")
+    print(f"Ability: {example['ability']}")
+    print(f"Reward model: {example['reward_model']}")
+    
+    # Extract ground truth and extra info
+    ground_truth = example['reward_model']['ground_truth']
+    extra_info = example['extra_info']
+    
+    print(f"\nGround truth type: {type(ground_truth)}")
+    print(f"Extra info keys: {list(extra_info.keys())}")
+    
+    # Parse verification_info if it's a string
+    verification_info = extra_info['verification_info']
+    if isinstance(verification_info, str):
+        verification_info = json.loads(verification_info)
+    
+    print(f"Verification info keys: {list(verification_info.keys())}")
+    
+    # Hardcoded test solution
+    solution_str = """<think>
+This is a test solution for the SWE-RL reward computation.
+I need to analyze the code and make the necessary changes.
+</think>
+<solution>
+```
+### test_file.py
+<<<<<<< SEARCH
+print("hello")
+=======
+print("hello world")
+>>>>>>> REPLACE
+```
+</solution>"""
+    
+    # Compute the score
+    try:
+        score = compute_score(solution_str, ground_truth, extra_info)
+        print(f"\n=== Result ===")
+        print(f"Computed score: {score}")
+        
+        if score == -1.0:
+            print("Score is -1.0, indicating an error in processing")
+        elif score >= 0.0:
+            print(f"Score is {score:.4f}, indicating similarity ratio")
+        else:
+            print("Unexpected score value")
+            
+    except Exception as e:
+        print(f"Error computing score: {e}")
+        import traceback
+        traceback.print_exc()
