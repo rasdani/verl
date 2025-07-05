@@ -9,29 +9,22 @@ export VLLM_ATTENTION_BACKEND=XFORMERS
 export VLLM_ENGINE_ITERATION_TIMEOUT_S=1000000000
 export VLLM_LOG_LEVEL=DEBUG
 
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --model)
-            MODEL_PATH="$2"
-            shift 2
-            ;;
-        *)
-            break
-            ;;
-    esac
-done
 
 # MODEL_PATH="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
-MODEL_PATH="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+# MODEL_PATH="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+MODEL_PATH="Qwen/Qwen3-8B"
 
 
 # TRAIN_FILE=~/persistent/data/github_patches_2k/train.parquet
 # TEST_FILE=~/persistent/data/github_patches_2k/test.parquet
-TRAIN_FILE=~/persistent/data/swe_smith_oracle_4k/train.parquet
-TEST_FILE=~/persistent/data/swe_smith_oracle_4k/test.parquet
+# TRAIN_FILE=~/persistent/data/swe_smith_oracle_4k/train.parquet
+# TEST_FILE=~/persistent/data/swe_smith_oracle_4k/test.parquet
+TRAIN_FILE=~/persistent/data/r2e-gym-subset-oracle-4k/train.parquet
+TEST_FILE=~/persistent/data/r2e-gym-subset-oracle-4k/test.parquet
+
 # EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k_fixed_reward
-EXPERIMENT_NAME=deepseek_r1_qwen3_8b_swe_smith_oracle_4k
+# EXPERIMENT_NAME=deepseek_r1_qwen3_8b_swe_smith_oracle_4k
+EXPERIMENT_NAME=qwen3_8b_r2e_gym_subset_oracle_4k
 
 # TRAIN_BATCH_SIZE=32
 TRAIN_BATCH_SIZE=64
@@ -85,7 +78,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=8 \
     actor_rollout_ref.rollout.val_kwargs.n=2 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
-    actor_rollout_ref.actor.checkpoint.save_contents=['model','optimizer','extra'] \
+    actor_rollout_ref.actor.checkpoint.save_contents=['model','optimizer','extra', 'huggingface'] \
     actor_rollout_ref.rollout.disable_log_stats=False \
     algorithm.kl_ctrl.kl_coef=0.001 \
     trainer.critic_warmup=0 \
@@ -95,10 +88,10 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=20 \
+    trainer.save_freq=15 \
     trainer.test_freq=10 \
     trainer.default_local_dir="/root/persistent/checkpoints/$EXPERIMENT_NAME" \
     trainer.validation_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/validation" \
     trainer.rollout_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/train" \
     trainer.default_hdfs_dir=null \
-    trainer.total_epochs=5 $@
+    trainer.total_epochs=10 $@
