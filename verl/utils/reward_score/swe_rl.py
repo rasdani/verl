@@ -663,11 +663,12 @@ def compute_score(solution_str, ground_truth, extra_info=None):
         float: Score between -1.0 and 1.0
     """
     oracle_patch = get_filelevel_diff(ground_truth)
-    verification_info = extra_info["verification_info"]
+    # verification_info = extra_info["verification_info"]
+    code_context = json.loads(extra_info["code_context"])
     
     try:
         reward, metadata = calculate_search_replace_reward_against_oracle_patch(
-            code_context=verification_info["code_context"],
+            code_context=code_context,
             oracle_patch=oracle_patch,
             output=solution_str
         )
@@ -710,11 +711,11 @@ if __name__ == "__main__":
     print(f"Extra info keys: {list(extra_info.keys())}")
     
     # Parse verification_info if it's a string
-    verification_info = extra_info['verification_info']
-    if isinstance(verification_info, str):
-        verification_info = json.loads(verification_info)
+    # verification_info = extra_info['verification_info']
+    # if isinstance(verification_info, str):
+    #     verification_info = json.loads(verification_info)
+    code_context = extra_info['code_context']
     
-    print(f"Verification info keys: {list(verification_info.keys())}")
     
     # Hardcoded test solution
     solution_str = """<think>
