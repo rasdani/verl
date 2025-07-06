@@ -9,36 +9,60 @@ export VLLM_ATTENTION_BACKEND=XFORMERS
 export VLLM_ENGINE_ITERATION_TIMEOUT_S=1000000000
 export VLLM_LOG_LEVEL=DEBUG
 
+# pip install cydifflib unidiff
+
+# Stop the running ray cluster
+# ray stop
+
+
 
 # MODEL_PATH="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
 # MODEL_PATH="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
-MODEL_PATH="Qwen/Qwen3-8B"
+MODEL_PATH="Qwen/Qwen3-14B"
 
 
 # TRAIN_FILE=~/persistent/data/github_patches_2k/train.parquet
 # TEST_FILE=~/persistent/data/github_patches_2k/test.parquet
 # TRAIN_FILE=~/persistent/data/swe_smith_oracle_4k/train.parquet
 # TEST_FILE=~/persistent/data/swe_smith_oracle_4k/test.parquet
-TRAIN_FILE=~/persistent/data/r2e-gym-subset-oracle-4k/train.parquet
-TEST_FILE=~/persistent/data/r2e-gym-subset-oracle-4k/test.parquet
+# TRAIN_FILE=~/persistent/data/r2e-gym-subset-oracle-4k/train.parquet
+# TEST_FILE=~/persistent/data/r2e-gym-subset-oracle-4k/test.parquet
+TRAIN_FILE=~/persistent/data/swe_rl_8k/train.parquet
+TEST_FILE=~/persistent/data/swe_rl_8k/test.parquet
 
 # EXPERIMENT_NAME=deepseek_r1_7b_gh_patches_2k_fixed_reward
 # EXPERIMENT_NAME=deepseek_r1_qwen3_8b_swe_smith_oracle_4k
-EXPERIMENT_NAME=qwen3_8b_r2e_gym_subset_oracle_4k
+# EXPERIMENT_NAME=qwen3_8b_r2e_gym_subset_oracle_4k
+# EXPERIMENT_NAME=qwen3_8b_swe_rl_8k
+EXPERIMENT_NAME=qwen3_14b_swe_rl_8k
 
+TRAIN_BATCH_SIZE=8
 # TRAIN_BATCH_SIZE=32
-TRAIN_BATCH_SIZE=64
-PPO_MINI_BATCH_SIZE=16
-PPO_MICRO_BATCH_SIZE=16
-PPO_MAX_TOKEN_LEN_PER_GPU=36864
+# TRAIN_BATCH_SIZE=32
+# TRAIN_BATCH_SIZE=64
+PPO_MINI_BATCH_SIZE=8
+PPO_MICRO_BATCH_SIZE=8
+# PPO_MINI_BATCH_SIZE=16
+# PPO_MICRO_BATCH_SIZE=16
+# PPO_MAX_TOKEN_LEN_PER_GPU=36864
+# PPO_MAX_TOKEN_LEN_PER_GPU=36864
+# PPO_MAX_TOKEN_LEN_PER_GPU=40960
+PPO_MAX_TOKEN_LEN_PER_GPU=32768
 # PPO_MAX_TOKEN_LEN_PER_GPU=40000
-MAX_NUM_BATCHED_TOKENS=36864
+# MAX_NUM_BATCHED_TOKENS=36864
 # MAX_NUM_BATCHED_TOKENS=40000
+# MAX_NUM_BATCHED_TOKENS=40960
+MAX_NUM_BATCHED_TOKENS=32768
+
 
 # MAX_PROMPT_LENGTH=2048
-MAX_PROMPT_LENGTH=4096
+# MAX_PROMPT_LENGTH=4096
+MAX_PROMPT_LENGTH=8192
 # MAX_RESPONSE_LENGTH=16384
-MAX_RESPONSE_LENGTH=32768
+# MAX_RESPONSE_LENGTH=32768
+MAX_RESPONSE_LENGTH=24576
+
+TP_SIZE=2
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -69,7 +93,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.clip_ratio_high=0.28 \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=$TP_SIZE \
     actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.temperature=0.6 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.6 \
@@ -78,7 +102,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=8 \
     actor_rollout_ref.rollout.val_kwargs.n=2 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
-    actor_rollout_ref.actor.checkpoint.save_contents=['model','optimizer','extra', 'huggingface'] \
+    actor_rollout_ref.actor.checkpoint.save_contents=[model,optimizer,extra,hf_model] \
     actor_rollout_ref.rollout.disable_log_stats=False \
     algorithm.kl_ctrl.kl_coef=0.001 \
     trainer.critic_warmup=0 \
@@ -88,10 +112,10 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=15 \
-    trainer.test_freq=10 \
+    trainer.save_freq=1 \
+    trainer.test_freq=1 \
     trainer.default_local_dir="/root/persistent/checkpoints/$EXPERIMENT_NAME" \
     trainer.validation_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/validation" \
     trainer.rollout_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/train" \
     trainer.default_hdfs_dir=null \
-    trainer.total_epochs=10 $@
+    trainer.total_epochs=1 $@

@@ -51,7 +51,7 @@ def convert_swe_rl_to_verl_format(example, idx, split):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="/root/persistent/data/r2e-gym-subset-oracle-4k")
+    parser.add_argument("--local_dir", default="/root/persistent/data/swe_rl_8k")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--max_samples", type=int, default=None, help="Limit number of samples for testing")
     parser.add_argument("--test_size", type=int, default=64, help="Number of samples for test set (default: 1024 - one typical batch)")
@@ -71,6 +71,7 @@ if __name__ == "__main__":
     # Process the dataset
     processed_train_dataset = train_dataset.map(function=lambda example, idx: convert_swe_rl_to_verl_format(example, idx, "train"), with_indices=True)
     processed_test_dataset = test_dataset.map(function=lambda example, idx: convert_swe_rl_to_verl_format(example, idx, "test"), with_indices=True)
+    processed_test_dataset = processed_test_dataset.select(range(2))
 
     local_dir = os.path.expanduser(args.local_dir)
     hdfs_dir = args.hdfs_dir

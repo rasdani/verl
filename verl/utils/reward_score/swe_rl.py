@@ -12,6 +12,7 @@ import re
 import warnings
 from typing import TypedDict
 import ast
+import json
 
 from unidiff import PatchedFile, PatchSet
 from unidiff.errors import UnidiffParseError
