@@ -71,7 +71,7 @@ if __name__ == "__main__":
     # Process the dataset
     processed_train_dataset = train_dataset.map(function=lambda example, idx: convert_swe_rl_to_verl_format(example, idx, "train"), with_indices=True)
     processed_test_dataset = test_dataset.map(function=lambda example, idx: convert_swe_rl_to_verl_format(example, idx, "test"), with_indices=True)
-    processed_test_dataset = processed_test_dataset.select(range(2))
+    # processed_test_dataset = processed_test_dataset.select(range(2))
 
     local_dir = os.path.expanduser(args.local_dir)
     hdfs_dir = args.hdfs_dir
