@@ -9,7 +9,7 @@ export VLLM_ATTENTION_BACKEND=XFORMERS
 export VLLM_ENGINE_ITERATION_TIMEOUT_S=1000000000
 export VLLM_LOG_LEVEL=DEBUG
 
-# pip install cydifflib unidiff
+pip install cydifflib unidiff
 
 # Stop the running ray cluster
 # ray stop
