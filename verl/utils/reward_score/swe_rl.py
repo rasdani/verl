@@ -126,7 +126,7 @@ def _post_process_multifile_repair(
 
     return edited_files, new_contents
 
-def extract_thought_solution(output: str) -> tuple[str, str]:
+def extract_thought_solution(output: str, relaxed: bool = True) -> tuple[str, str]:
     """
     Extract the thought and solution from the output. It is expected to have the following format:
     <think>
@@ -136,6 +136,9 @@ def extract_thought_solution(output: str) -> tuple[str, str]:
     ...
     </solution>
     """
+    if relaxed:
+        thought, answer = output.split(THINK_END, maxsplit=1)
+        return thought, answer
     for tag in [THINK_START, THINK_END, ANSWER_START, ANSWER_END]:
         if output.count(tag) != 1:
             raise FormatError(f"count of {tag} is not 1")
