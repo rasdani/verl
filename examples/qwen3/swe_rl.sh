@@ -16,10 +16,11 @@ pip install cydifflib unidiff
 
 
 
-MODEL_PATH="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+# MODEL_PATH="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
 # MODEL_PATH="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
 # MODEL_PATH="Qwen/Qwen3-14B"
 # MODEL_PATH="Qwen/Qwen3-8B"
+MODEL_PATH="deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
 
 
 # TRAIN_FILE=~/persistent/data/github_patches_2k/train.parquet
@@ -36,7 +37,8 @@ TEST_FILE=~/persistent/data/swe_rl_8k/test.parquet
 # EXPERIMENT_NAME=qwen3_8b_r2e_gym_subset_oracle_4k
 # EXPERIMENT_NAME=qwen3_8b_swe_rl_8k
 # EXPERIMENT_NAME=qwen3_14b_swe_rl_8k
-EXPERIMENT_NAME=deepseek_r1_7b_swe_rl_8k
+# EXPERIMENT_NAME=deepseek_r1_7b_swe_rl_8k
+EXPERIMENT_NAME=deepseek_r1_llama_8b_swe_rl_8k
 
 # TRAIN_BATCH_SIZE=8
 TRAIN_BATCH_SIZE=32
