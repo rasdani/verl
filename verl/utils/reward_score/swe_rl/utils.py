@@ -1,6 +1,7 @@
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+import cydifflib
 
 from pydantic import BaseModel, Field
 
@@ -337,3 +338,87 @@ class FileDiff(BaseModel):
     @property
     def is_new(self) -> bool:
         return self.old_file_content == "/dev/null" or self.old_file_content == ""
+
+    def generate_hunks_from_content(self) -> None:
+        if not self.old_file_content or not self.new_file_content:
+            return
+        
+        old_lines = self.old_file_content.splitlines()
+        new_lines = self.new_file_content.splitlines()
+        
+        diff = list(cydifflib.unified_diff(
+            old_lines, 
+            new_lines, 
+            fromfile=f"a/{self.path}",
+            tofile=f"b/{self.path}",
+            n=3  # context lines
+        ))
+        
+        hunks = []
+        current_hunk_lines = []
+        current_descriptor = None
+        
+        i = 0
+        while i < len(diff):
+            line = diff[i]
+            
+            # Look for hunk header (e.g., "@@ -1,4 +1,4 @@")
+            if line.startswith("@@"):
+                # Save previous hunk if exists
+                if current_descriptor and current_hunk_lines:
+                    line_group = LineGroup(all_lines=current_hunk_lines)
+                    hunks.append(UniHunk(descriptor=current_descriptor, line_group=line_group))
+                
+                current_descriptor = self._parse_hunk_header(line)
+                current_hunk_lines = []
+                
+            elif line.startswith(" "):
+                # Context line
+                current_hunk_lines.append(Line(content=line[1:], type=LineType.CONTEXT))
+            elif line.startswith("-"):
+                # Deleted line
+                current_hunk_lines.append(Line(content=line[1:], type=LineType.DELETED))
+            elif line.startswith("+"):
+                # Added line
+                current_hunk_lines.append(Line(content=line[1:], type=LineType.ADDED))
+            elif line.startswith("\\"):
+                # Note line (e.g., "\ No newline at end of file")
+                current_hunk_lines.append(Line(content=line[2:], type=LineType.NOTE))
+            
+            i += 1
+        
+        # Add final hunk
+        if current_descriptor and current_hunk_lines:
+            line_group = LineGroup(all_lines=current_hunk_lines)
+            hunks.append(UniHunk(descriptor=current_descriptor, line_group=line_group))
+        
+        self.hunks = hunks
+    
+    def _parse_hunk_header(self, header_line: str) -> UnitHunkDescriptor:
+        header_content = header_line.strip()
+        if header_content.startswith("@@"):
+            header_content = header_content[2:]
+        if header_content.endswith("@@"):
+            header_content = header_content[:-2]
+        
+        # Split on space to separate ranges from (optional) function context
+        parts = header_content.strip().split(" ", 2)
+        old_range_str = parts[0]  # e.g., "-1,4"
+        new_range_str = parts[1]  # e.g., "+1,4"
+        section = parts[2] if len(parts) > 2 else ""
+        
+        old_range = self._parse_range(old_range_str[1:]) 
+        new_range = self._parse_range(new_range_str[1:]) 
+        
+        return UnitHunkDescriptor(
+            old_range=old_range,
+            new_range=new_range,
+            section=section
+        )
+    
+    def _parse_range(self, range_str: str) -> Range:
+        if "," in range_str:
+            start, length = range_str.split(",")
+            return Range(start=int(start), length=int(length))
+        else:
+            return Range(start=int(range_str), length=None)

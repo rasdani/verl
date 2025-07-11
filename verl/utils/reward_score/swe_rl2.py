@@ -42,18 +42,27 @@ def parse_edits(input_text: str) -> dict[str, list[tuple[str, str]]]:
         edits[file_path].append((search_content, replace_content))
     return edits
 
-def create_patched_code_context(
+def create_patched_file_context(
     edited_code_context: dict[str, str],
     file_diffs: list[FileDiff],
 ) -> dict[str, str]:
     patch_dict = dict[str, str]()
+    # breakpoint()
     for file_diff in file_diffs:
         file_path = file_diff.header.file.path
-        file_diff.new_file_content = edited_code_context.get(file_path, "")
+        # update the file content with the edited code context
+        print(f"BEFORE: ID of file_diff.new_file_content: {id(file_diff.new_file_content)}")
+        new_file_content = edited_code_context.get(file_path, "")
+        # breakpoint()
+        file_diff.new_file_content = new_file_content
+        # file_diff.new_file_content = edited_code_context.get(file_path, "")
+        print(f"AFTER: ID of file_diff.new_file_content: {id(file_diff.new_file_content)}")
+        file_diff.generate_hunks_from_content()
         predicted_patch = file_diff.get_patch()
         if predicted_patch.strip():
             patch_dict[file_path] = predicted_patch
     return patch_dict
+
 
 def get_unidiff_from_patched_code_context(patched_code_context: dict[str, str]) -> str:
     try:
@@ -66,14 +75,14 @@ def get_unidiff_from_patched_code_context(patched_code_context: dict[str, str]) 
     except UnidiffParseError as e:
         return ""
 
-def apply_edits(code_context: dict[str, str], edits: dict[str, list[tuple[str, str]]]) -> dict[str, str]:
+def apply_edits(file_context: dict[str, str], edits: dict[str, list[tuple[str, str]]]) -> dict[str, str]:
     edited_code_context = {}
     for file_path, file_edits in edits.items():
-        file_content = f"\n{code_context.get(file_path, '')}"
+        edited_file_content = f"\n{file_context.get(file_path, '')}"
         for search_str, replace_str in file_edits:
-            if search_str not in file_content:
+            if search_str not in edited_file_content:
                 return None
-            edited_file_content = file_content.replace(f"\n{search_str}", f"\n{replace_str}")
+            edited_file_content = edited_file_content.replace(f"\n{search_str}", f"\n{replace_str}")
         edited_code_context[file_path] = edited_file_content.lstrip("\n")
     return edited_code_context
 
@@ -89,16 +98,16 @@ def score_patch(pred_patch, oracle_patch):
     except Exception as e:
         return -1.0
 
-def score(solution_str, code_context, file_diffs, oracle_patch):
+def score(solution_str, file_context, file_diffs, oracle_patch):
     after_think = parse_thinking(solution_str)
     edits = parse_edits(after_think)
     if len(edits) == 0:
         return -1.0
-    edited_code_context = apply_edits(code_context, edits)
+    edited_code_context = apply_edits(file_context, edits)
     if edited_code_context is None:
         return -1.0
-    patched_code_context = create_patched_code_context(edited_code_context, file_diffs)
-    pred_patch = get_unidiff_from_patched_code_context(patched_code_context)
+    patched_file_context = create_patched_file_context(edited_code_context, file_diffs)
+    pred_patch = get_unidiff_from_patched_code_context(patched_file_context)
     breakpoint()
     return score_patch(pred_patch, oracle_patch)
 
@@ -121,11 +130,11 @@ def compute_score(solution_str, ground_truth, extra_info=None):
     file_diffs = [FileDiff(**file_diff) for file_diff in file_diffs]
 
     # verification_info = extra_info["verification_info"]
-    code_context = json.loads(extra_info["code_context"])
+    file_context = json.loads(extra_info["file_context"])
     oracle_patch = ground_truth
     
     try:
-        return score(solution_str, code_context, file_diffs, oracle_patch)
+        return score(solution_str, file_context, file_diffs, oracle_patch)
     except Exception:
         return -1.0
 
@@ -161,24 +170,31 @@ The issue arises because the `sliding_window_inference` function is detaching th
 Here is the fix:
 
 ```python
-### monai/inferers/utils.py
+### monai/losses/contrastive.py
 <<<<<<< SEARCH
-            output_image_list[ss] = output_image_list[ss].detach()
+        sim_ij = torch.diag(sim_matrix, self.batch_size)
+        sim_ji = torch.diag(sim_matrix, -self.batch_size)
 =======
-            output_image_list[ss] = output_image_list[ss]
+        sim_ij = torch.diag(sim_matrix, input.shape[0])
+        sim_ji = torch.diag(sim_matrix, -input.shape[0])
 >>>>>>> REPLACE
 ```
 </solution>
 """
 
     import datasets
+    from time import perf_counter
 
     ds = datasets.load_dataset("rasdani/SkyRL-v0-293-data-oracle-8k-context", split="train")
+    # ds = datasets.load_dataset("rasdani/SkyRL-v0-293-data-oracle", split="train")
     ground_truth = ds[0]['patch']
     extra_info = {
         "parsed_commit_content": ds[0]['parsed_commit_content'],
-        "code_context": ds[0]['code_context']
+        "file_context": ds[0]['file_context']
     }
+    start_time = perf_counter()
     result = compute_score(solution_str, ground_truth, extra_info)
+    end_time = perf_counter()
     print(result)
+    print(f"Time taken: {end_time - start_time} seconds")
     
