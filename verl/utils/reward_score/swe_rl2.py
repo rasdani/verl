@@ -1,21 +1,21 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.
+# @article{wei2025swerl,
+#   title={SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open Software Evolution}, 
+#   author={Yuxiang Wei and Olivier Duchenne and Jade Copet and Quentin Carbonneaux and Lingming Zhang and Daniel Fried and Gabriel Synnaeve and Rishabh Singh and Sida I. Wang},
+#   year={2025},
+#   journal={arXiv preprint arXiv:2502.18449}
+# }
 
 import re
-import os
 import cydifflib
-import re
-import warnings
-from typing import TypedDict
-import ast
 import json
 from collections import defaultdict
 
-from unidiff import PatchedFile, PatchSet
+from unidiff import PatchSet
 from unidiff.errors import UnidiffParseError
 
-from verl.utils.reward_score.swe_rl.utils import FileDiff, FileDiffHeader, FileInfo
+from verl.utils.reward_score.swe_rl.utils import FileDiff, extract_minimal_patch
 
-EDITS_REGEX = re.compile(
+EDITS_PATTERN = re.compile(
     r"```.*?\n"
     r"### (.*)\n"
     r"<<<<<<< SEARCH\n"
@@ -26,7 +26,6 @@ EDITS_REGEX = re.compile(
     r"```"
 )
 
-
 def parse_thinking(completion: str) -> str:
     think_splits = completion.split("</think>")
     after_think = think_splits[1].strip() if len(think_splits) == 2 else ""
@@ -34,7 +33,7 @@ def parse_thinking(completion: str) -> str:
 
 def parse_edits(input_text: str) -> dict[str, list[tuple[str, str]]]:
     edits = defaultdict(list)
-    matches = EDITS_REGEX.finditer(input_text)
+    matches = EDITS_PATTERN.finditer(input_text)
     for match in matches:
         file_path = match.group(1)
         search_content = match.group(2)
@@ -43,20 +42,14 @@ def parse_edits(input_text: str) -> dict[str, list[tuple[str, str]]]:
     return edits
 
 def create_patched_file_context(
-    edited_code_context: dict[str, str],
+    edited_file_context: dict[str, str],
     file_diffs: list[FileDiff],
 ) -> dict[str, str]:
     patch_dict = dict[str, str]()
-    # breakpoint()
     for file_diff in file_diffs:
         file_path = file_diff.header.file.path
-        # update the file content with the edited code context
-        print(f"BEFORE: ID of file_diff.new_file_content: {id(file_diff.new_file_content)}")
-        new_file_content = edited_code_context.get(file_path, "")
-        # breakpoint()
-        file_diff.new_file_content = new_file_content
-        # file_diff.new_file_content = edited_code_context.get(file_path, "")
-        print(f"AFTER: ID of file_diff.new_file_content: {id(file_diff.new_file_content)}")
+        # update the file content with the edited file context
+        file_diff.new_file_content = edited_file_context.get(file_path, "")
         file_diff.generate_hunks_from_content()
         predicted_patch = file_diff.get_patch()
         if predicted_patch.strip():
@@ -64,9 +57,9 @@ def create_patched_file_context(
     return patch_dict
 
 
-def get_unidiff_from_patched_code_context(patched_code_context: dict[str, str]) -> str:
+def get_unidiff_from_patched_file_context(patched_file_context: dict[str, str]) -> str:
     try:
-        patches = list(patched_code_context.values())
+        patches = list(patched_file_context.values())
         first_patch = patches.pop(0)
         patch_set = PatchSet(first_patch)
         for patch in patches:
@@ -76,17 +69,17 @@ def get_unidiff_from_patched_code_context(patched_code_context: dict[str, str]) 
         return ""
 
 def apply_edits(file_context: dict[str, str], edits: dict[str, list[tuple[str, str]]]) -> dict[str, str]:
-    edited_code_context = {}
+    edited_file_context = {}
     for file_path, file_edits in edits.items():
         edited_file_content = f"\n{file_context.get(file_path, '')}"
         for search_str, replace_str in file_edits:
             if search_str not in edited_file_content:
                 return None
             edited_file_content = edited_file_content.replace(f"\n{search_str}", f"\n{replace_str}")
-        edited_code_context[file_path] = edited_file_content.lstrip("\n")
-    return edited_code_context
+        edited_file_context[file_path] = edited_file_content.lstrip("\n")
+    return edited_file_context
 
-def score_patch(pred_patch, oracle_patch):
+def score_patch(pred_patch: str, oracle_patch: str) -> float:
     try:
         score = cydifflib.SequenceMatcher(
             None,
@@ -98,20 +91,21 @@ def score_patch(pred_patch, oracle_patch):
     except Exception as e:
         return -1.0
 
-def score(solution_str, file_context, file_diffs, oracle_patch):
+def score(solution_str: str, file_context: dict[str, str], file_diffs: list[FileDiff], oracle_patch: str) -> float:
     after_think = parse_thinking(solution_str)
     edits = parse_edits(after_think)
     if len(edits) == 0:
         return -1.0
-    edited_code_context = apply_edits(file_context, edits)
-    if edited_code_context is None:
+    edited_file_context = apply_edits(file_context, edits)
+    if edited_file_context is None:
         return -1.0
-    patched_file_context = create_patched_file_context(edited_code_context, file_diffs)
-    pred_patch = get_unidiff_from_patched_code_context(patched_file_context)
-    breakpoint()
-    return score_patch(pred_patch, oracle_patch)
+    patched_file_context = create_patched_file_context(edited_file_context, file_diffs)
+    pred_patch = get_unidiff_from_patched_file_context(patched_file_context)
+    min_pred_patch = extract_minimal_patch(pred_patch)
+    min_oracle_patch = extract_minimal_patch(oracle_patch)
+    return score_patch(min_pred_patch, min_oracle_patch)
 
-def compute_score(solution_str, ground_truth, extra_info=None):
+def compute_score(solution_str: str, ground_truth: str, extra_info: dict[str, str] = None) -> float:
     """
     Compute score for SWE fixer based on solution and ground truth.
     
@@ -172,10 +166,34 @@ Here is the fix:
 ```python
 ### monai/losses/contrastive.py
 <<<<<<< SEARCH
+        self.batch_size = batch_size
+        self.temperature = temperature
+=======
+        # comment out the line below
+        self.temperature = temperature
+        # comment out the line below
+>>>>>>> REPLACE
+```
+
+```python
+### monai/losses/contrastive.py
+<<<<<<< SEARCH
+        negatives_mask = ~torch.eye(self.batch_size * 2, self.batch_size * 2, dtype=torch.bool)
+        negatives_mask = torch.clone(negatives_mask.type(torch.float)).to(input.device)
+=======
+        negatives_mask = ~torch.eye(input.shape[0] * 2, input.shape[0] * 2, dtype=torch.bool)
+        negatives_mask = torch.clone(negatives_mask.type(torch.float)).to(input.device)
+>>>>>>> REPLACE
+```
+
+```python
+### monai/losses/contrastive.py
+<<<<<<< SEARCH
         sim_ij = torch.diag(sim_matrix, self.batch_size)
         sim_ji = torch.diag(sim_matrix, -self.batch_size)
 =======
         sim_ij = torch.diag(sim_matrix, input.shape[0])
+        # comment out the line below
         sim_ji = torch.diag(sim_matrix, -input.shape[0])
 >>>>>>> REPLACE
 ```

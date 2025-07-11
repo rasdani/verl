@@ -2,10 +2,108 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 import cydifflib
+import re
 
 from pydantic import BaseModel, Field
 
+# adapted from https://github.com/SWE-bench/SWE-bench/blob/main/swebench/harness/utils.py
+PATCH_PATTERN = re.compile(
+    r"(?:diff[\w\_\.\ \/\-]+\n)?\-\-\-\s+a\/(?:.*?)\n\+\+\+\s+b\/(?:.*?)(?=diff\ |\-\-\-\ a\/|\Z)",
+    re.DOTALL,
+)
+PATCH_FILE_PATTERN = re.compile(r"\-\-\-\s+a\/(?:.+)\n\+\+\+\s+b\/(?:.+)")
+PATCH_HUNK_PATTERN = re.compile(
+    r"\@\@\s+\-(\d+),(\d+)\s+\+(\d+),(\d+)\s+\@\@(.+?)(?=diff\ |\-\-\-\ a\/|\@\@\ \-|\Z)",
+    re.DOTALL,
+)
+COMMENT_LINE_PATTERN = re.compile(r"^[+-][ \t]*#.*$")
 
+
+def strip_comment_lines(patch: str) -> str:
+    lines = patch.splitlines(keepends=True)
+    filtered = [
+        ln for ln in lines if not COMMENT_LINE_PATTERN.match(ln)
+    ]
+    return "".join(filtered)
+
+def get_first_idx(charlist):
+    """Get index of first occurrence of "-" or "+" in charlist"""
+    first_min = charlist.index("-") if "-" in charlist else len(charlist)
+    first_plus = charlist.index("+") if "+" in charlist else len(charlist)
+    return min(first_min, first_plus)
+
+
+def get_last_idx(charlist):
+    """Get index of last occurrence of "-" or "+" in charlist"""
+    char_idx = get_first_idx(charlist[::-1])
+    last_idx = len(charlist) - char_idx
+    return last_idx + 1
+
+
+def strip_content(hunk):
+    """Remove trailing non +/- lines and trailing whitespace per line per hunk"""
+    first_chars = list(map(lambda x: None if not len(x) else x[0], hunk.split("\n")))
+    first_idx = get_first_idx(first_chars)
+    last_idx = get_last_idx(first_chars)
+    new_lines = list(map(lambda x: x.rstrip(), hunk.split("\n")[first_idx:last_idx]))
+    # should leave one space for empty context lines
+    new_lines = [line if line.strip() else " " for line in new_lines]
+    new_hunk = "\n" + "\n".join(new_lines) + "\n"
+    return new_hunk, first_idx - 1
+
+
+def get_hunk_stats(pre_start, pre_len, post_start, post_len, hunk, total_delta):
+    """Recalculate hunk start/end position and diff delta"""
+    stats = {"context": 0, "added": 0, "subtracted": 0}
+    hunk = hunk.split("\n", 1)[-1].strip("\n")
+    for line in hunk.split("\n"):
+        if line.startswith("-"):
+            stats["subtracted"] += 1
+        elif line.startswith("+"):
+            stats["added"] += 1
+        else:
+            stats["context"] += 1
+    context = stats["context"]
+    added = stats["added"]
+    subtracted = stats["subtracted"]
+    pre_len = context + subtracted
+    post_start = pre_start + total_delta
+    post_len = context + added
+    total_delta = total_delta + (post_len - pre_len)
+    return pre_start, pre_len, post_start, post_len, total_delta
+
+def extract_minimal_patch(model_patch):
+    """
+    Wrapper function that takes hunk and
+    * Removes trailing non +/- lines and trailing whitespace per line per hunk
+    * Recalculates hunk start/end position and diff delta
+    * Returns new patch
+    """
+    model_patch = model_patch.lstrip("\n")
+    new_patch = ""
+    for patch in PATCH_PATTERN.findall(model_patch):
+        total_delta = 0
+        patch_header = PATCH_FILE_PATTERN.findall(patch)[0]
+        if patch_header:
+            new_patch += patch_header + "\n"
+        for hunk in PATCH_HUNK_PATTERN.findall(patch):
+            pre_start, pre_len, post_start, post_len, content = hunk
+            pre_start, pre_len, post_start, post_len, content = list(
+                map(lambda x: int(x) if x.isnumeric() else x, hunk)
+            )
+            content = strip_comment_lines(content)
+            content, adjust_pre_start = strip_content(content)
+            pre_start += adjust_pre_start
+            pre_start, pre_len, post_start, post_len, total_delta = get_hunk_stats(
+                pre_start, pre_len, post_start, post_len, content, total_delta
+            )
+            new_patch += (
+                f"@@ -{pre_start},{pre_len} +{post_start},{post_len} @@{content}"
+            )
+    return new_patch
+
+
+# adapted from https://github.com/R2E-Gym/R2E-Gym/tree/main/src/r2egym/commit_models
 class EntityType(Enum):
     FUNCTION = "function"
     CLASS = "class"
@@ -362,9 +460,9 @@ class FileDiff(BaseModel):
         while i < len(diff):
             line = diff[i]
             
-            # Look for hunk header (e.g., "@@ -1,4 +1,4 @@")
+            # look for hunk header (e.g., "@@ -1,4 +1,4 @@")
             if line.startswith("@@"):
-                # Save previous hunk if exists
+                # save previous hunk if exists
                 if current_descriptor and current_hunk_lines:
                     line_group = LineGroup(all_lines=current_hunk_lines)
                     hunks.append(UniHunk(descriptor=current_descriptor, line_group=line_group))
@@ -373,21 +471,18 @@ class FileDiff(BaseModel):
                 current_hunk_lines = []
                 
             elif line.startswith(" "):
-                # Context line
                 current_hunk_lines.append(Line(content=line[1:], type=LineType.CONTEXT))
             elif line.startswith("-"):
-                # Deleted line
                 current_hunk_lines.append(Line(content=line[1:], type=LineType.DELETED))
             elif line.startswith("+"):
-                # Added line
                 current_hunk_lines.append(Line(content=line[1:], type=LineType.ADDED))
             elif line.startswith("\\"):
-                # Note line (e.g., "\ No newline at end of file")
+                # note line (e.g., "\ No newline at end of file")
                 current_hunk_lines.append(Line(content=line[2:], type=LineType.NOTE))
             
             i += 1
         
-        # Add final hunk
+        # add final hunk
         if current_descriptor and current_hunk_lines:
             line_group = LineGroup(all_lines=current_hunk_lines)
             hunks.append(UniHunk(descriptor=current_descriptor, line_group=line_group))
@@ -401,7 +496,7 @@ class FileDiff(BaseModel):
         if header_content.endswith("@@"):
             header_content = header_content[:-2]
         
-        # Split on space to separate ranges from (optional) function context
+        # split on space to separate ranges from (optional) function context
         parts = header_content.strip().split(" ", 2)
         old_range_str = parts[0]  # e.g., "-1,4"
         new_range_str = parts[1]  # e.g., "+1,4"
