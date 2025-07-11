@@ -106,29 +106,15 @@ def score(solution_str: str, file_context: dict[str, str], file_diffs: list[File
     return score_patch(min_pred_patch, min_oracle_patch)
 
 def compute_score(solution_str: str, ground_truth: str, extra_info: dict[str, str] = None) -> float:
-    """
-    Compute score for SWE fixer based on solution and ground truth.
-    
-    Args:
-        solution_str (str): The model's output containing patches
-        ground_truth (str): Expected output or reference
-        extra_info (dict, optional): Additional verification information including:
-            - original_files: List of files to be modified
-            - expected_patches: Expected code patches
-            
-    Returns:
-        float: Score between -1.0 and 1.0
-    """
     parsed_commit_content = json.loads(extra_info["parsed_commit_content"])
     file_diffs = parsed_commit_content.get("file_diffs")
     file_diffs = [FileDiff(**file_diff) for file_diff in file_diffs]
 
     # verification_info = extra_info["verification_info"]
     file_context = json.loads(extra_info["file_context"])
-    oracle_patch = ground_truth
     
     try:
-        return score(solution_str, file_context, file_diffs, oracle_patch)
+        return score(solution_str=solution_str, file_context=file_context, file_diffs=file_diffs, oracle_patch=ground_truth)
     except Exception:
         return -1.0
 
