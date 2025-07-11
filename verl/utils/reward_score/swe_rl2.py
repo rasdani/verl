@@ -191,6 +191,8 @@ Here is the fix:
 
     ds = datasets.load_dataset("rasdani/SkyRL-v0-293-data-oracle-8k-context", split="train")
     # ds = datasets.load_dataset("rasdani/SkyRL-v0-293-data-oracle", split="train")
+    # ds = datasets.load_dataset("parquet", data_files="data/swe_rl_8k/train.parquet", split="train")
+    # ds_test = datasets.load_dataset("parquet", data_files="data/swe_rl_8k/test.parquet", split="train")
     ground_truth = ds[0]['patch']
     extra_info = {
         "parsed_commit_content": ds[0]['parsed_commit_content'],
