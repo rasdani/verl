@@ -128,6 +128,6 @@ python3 -m verl.trainer.main_ppo \
     trainer.validation_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/validation" \
     trainer.rollout_data_dir="/root/persistent/rollouts/$EXPERIMENT_NAME/train" \
     trainer.default_hdfs_dir=null \
-    trainer.total_epochs=12 $@
+    trainer.total_epochs=20 $@
 
     # trainer.val_before_train=False \
