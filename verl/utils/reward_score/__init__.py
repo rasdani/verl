@@ -102,6 +102,11 @@ def default_compute_score(
 
         res = search_r1_like_qa_em.compute_score(solution_str, ground_truth)
 
+    elif data_source == "swe_rl":
+        from . import swe_rl
+
+        res = swe_rl.compute_score(solution_str, ground_truth, extra_info)
+
     else:
         raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
 
