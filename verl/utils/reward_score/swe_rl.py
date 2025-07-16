@@ -13,7 +13,7 @@ import cydifflib
 from unidiff import PatchSet
 from unidiff.errors import UnidiffParseError
 
-from verl.utils.reward_score.swe_rl.utils import FileDiff, extract_minimal_patch
+from verl.utils.reward_score.swe_rl_utils.utils import FileDiff, extract_minimal_patch
 
 EDITS_PATTERN = re.compile(
     r"```.*?\n"
